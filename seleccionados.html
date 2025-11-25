@@ -41,9 +41,150 @@
             cursor:pointer;
             font-size: 1rem;
         }
+        .mensaje-vacio {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-size: 1.2rem;
+        }
         @media screen and (max-width: 600px) {
             .item { width: 90vw; padding: 10px; }
             .botonera button { width: 90vw; margin-bottom: 10px; font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+<h1>Productos Seleccionados - ATITUDE</h1>
+<div class="botonera">
+    <button id="descargarPDF">Descargar selección en PDF (sin imágenes)</button>
+    <button id="enviarWhatsapp">Enviar selección por WhatsApp</button>
+</div>
+<div class="catalogo" id="catalogo"></div>
+<div class="mensaje-vacio" id="mensajeVacio" style="display:none;">
+    No hay productos seleccionados. <a href="index.html">Volver al catálogo</a>
+</div>
+<div id="viewImgPopup" onclick="this.style.display='none'">
+    <span id="cerrarPopup">&times;</span>
+    <img id="imgZoom" src="">
+</div>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+<script>
+    // --- CONFIGURACIÓN ---
+    const CSV_PATH = "atitude01.csv";
+    // const CSV_PATH = "https://docs.google.com/spreadsheets/d/1Ab_ZH3FGPyEw-_aAKuCXgGw_2bDYJXQKQicqKryNVzg/export?format=csv";
+
+    let seleccionados = JSON.parse(localStorage.getItem('productosSeleccionados') || '{}');
+    let cantidades = JSON.parse(localStorage.getItem('cantidadesSeleccionadas') || '{}');
+    let productos = [];
+
+    function cargarProductos() {
+        Papa.parse(CSV_PATH, {
+            download: true,
+            header: true,
+            complete: function(res) {
+                // Filtrar solo productos válidos que están seleccionados
+                productos = res.data.filter(p => {
+                    let idProducto = p.ID || p.MODELO;
+                    return seleccionados[idProducto] === true && (p.ID || p.MODELO);
+                });
+
+                console.log('Seleccionados desde localStorage:', seleccionados);
+                console.log('Productos filtrados:', productos);
+
+                let catalogo = document.getElementById("catalogo");
+                let mensajeVacio = document.getElementById("mensajeVacio");
+                let botones = document.querySelectorAll('.botonera button');
+
+                if(productos.length === 0) {
+                    catalogo.innerHTML = "";
+                    mensajeVacio.style.display = "block";
+                    botones.forEach(btn => btn.disabled = true);
+                    return;
+                }
+
+                mensajeVacio.style.display = "none";
+                botones.forEach(btn => btn.disabled = false);
+                catalogo.innerHTML = "";
+
+                productos.forEach(p => {
+                    let idProducto = p.ID || p.MODELO;
+                    let cantidad = cantidades[idProducto] || "";
+                    let div = document.createElement("div");
+                    div.className = "item";
+                    div.innerHTML=`
+                        <img src="${p.ENLACE}" alt="Imagen de ${p.MODELO}" onclick="mostrarImagen('${p.ENLACE.replace(/'/g, "\\'")}')">
+                        <div>
+                          <div><b>Marca:</b> ${p.MARCA}</div>
+                          <div><b>Modelo:</b> ${p.MODELO}</div>
+                          <div><b>Cantidad:</b> ${cantidad || '-'}</div>
+                        </div>
+                    `;
+                    catalogo.appendChild(div);
+                });
+            },
+            error: function(error) {
+                console.error('Error al cargar CSV:', error);
+                document.getElementById("catalogo").innerHTML = '<div class="mensaje-vacio">Error al cargar los productos. Intenta recargar la página.</div>';
+            }
+        });
+    }
+
+    window.mostrarImagen = function(src){
+        document.getElementById('imgZoom').src = src;
+        document.getElementById('viewImgPopup').style.display = "flex";
+    };
+
+    document.getElementById('cerrarPopup').onclick = function(e){
+        e.stopPropagation();
+        document.getElementById('viewImgPopup').style.display = "none";
+    };
+
+    window.addEventListener('keydown', function(e){
+        if(e.key === "Escape"){
+            document.getElementById('viewImgPopup').style.display='none';
+        }
+    });
+
+    document.getElementById('descargarPDF').onclick = function(){
+        if(productos.length === 0) {
+            alert('No hay productos seleccionados para descargar.');
+            return;
+        }
+        let productosSeleccionados = productos.map(p => {
+            let idProducto = p.ID || p.MODELO;
+            return `Marca: ${p.MARCA}\nModelo: ${p.MODELO}\nCantidad: ${cantidades[idProducto] || ''}\n`;
+        }).join('\n-----------------\n');
+        
+        let blob = new Blob([productosSeleccionados], {type:'text/plain;charset=utf-8'});
+        let link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'seleccionados_ATITUDE.txt';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    document.getElementById('enviarWhatsapp').onclick = function(){
+        if(productos.length === 0) {
+            alert('No hay productos seleccionados para enviar.');
+            return;
+        }
+        let msg = "📋 SELECCIÓN DE PRODUCTOS ATITUDE\n\n";
+        msg += productos.map(p => {
+            let idProducto = p.ID || p.MODELO;
+            return `Marca: ${p.MARCA}\nModelo: ${p.MODELO}\nCantidad: ${cantidades[idProducto] || ''}`;
+        }).join('\n\n-----------------\n\n');
+        
+        let url = encodeURIComponent(msg);
+        window.open(`https://wa.me/595987334125?text=${url}`, '_blank');
+    };
+
+    // Cargar productos al abrir la página
+    cargarProductos();
+</script>
+</body>
+</html>
+
 
 
 
