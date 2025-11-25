@@ -2,81 +2,120 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Productos Seleccionados - ATITUDE</title>
     <style>
-        body { font-family: Arial; }
-        h1 { text-align: center; }
+        body { font-family: Arial; margin: 0; padding: 10px; }
+        h1 { text-align: center; font-size: 1.6rem; }
         .catalogo { display: flex; flex-wrap: wrap; gap: 22px; justify-content: center; }
-        .item { border: 1px solid #ccc; padding: 18px; width: 240px; text-align: center; background: #f5f5fd; border-radius: 8px; }
-        .item img { max-width: 95%; max-height: 120px; cursor:pointer; }
-        #viewImgPopup { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.7); justify-content:center; align-items:center; z-index:9999; }
-        #imgZoom { max-width:70vw; max-height:70vh; border:8px solid #fff; border-radius:8px;}
-        .botonera {text-align:center; margin-bottom:18px;}
-        .botonera button {margin:0 8px; padding:9px 18px; border:none; border-radius:4px; background:#186fb7; color:#fff; font-weight:bold; cursor:pointer;}
+        .item { border: 1px solid #ccc; padding: 18px; width: 240px; text-align: center; background: #f5f5fd; border-radius: 8px; box-sizing: border-box; }
+        .item img { max-width: 95%; max-height: 120px; cursor: pointer; border-radius: 6px; }
+        #viewImgPopup {
+            display:none;
+            position:fixed;
+            top:0; left:0; right:0; bottom:0;
+            background:rgba(0,0,0,.7);
+            justify-content:center;
+            align-items:center;
+            z-index:9999;
+        }
+        #imgZoom {
+            max-width: 90vw;
+            max-height: 90vh;
+            border: 8px solid #fff;
+            border-radius: 8px;
+        }
+        .botonera {
+            text-align:center;
+            margin-bottom:18px;
+        }
+        .botonera button {
+            margin:0 8px;
+            padding:9px 18px;
+            border:none;
+            border-radius:4px;
+            background:#186fb7;
+            color:#fff;
+            font-weight:bold;
+            cursor:pointer;
+            font-size: 1rem;
+        }
+        @media screen and (max-width: 600px) {
+            .item {
+                width: 90vw;
+                padding: 10px;
+            }
+            .botonera button {
+                width: 90vw;
+                margin-bottom: 10px;
+                font-size: 1.1rem;
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>Productos Seleccionados - ATITUDE</h1>
-    <div class="botonera">
-        <button id="descargarPDF">Descargar selección en PDF (sin imágenes)</button>
-        <button id="enviarWhatsapp">Enviar selección por WhatsApp</button>
-    </div>
-    <div class="catalogo" id="catalogo"></div>
-    <div id="viewImgPopup" onclick="this.style.display='none'">
-        <img id="imgZoom" src="">
-    </div>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
-    <script>
-        let seleccionados = JSON.parse(localStorage.getItem('productosSeleccionados') || '{}');
-        let cantidades = JSON.parse(localStorage.getItem('cantidadesSeleccionadas') || '{}');
-        let productos = [];
-        Papa.parse("atitude01.csv", {
-            download: true,
-            header: true,
-            complete: function(res) {
-                productos = res.data.filter(p => seleccionados[p.ID]);
-                let catalogo = document.getElementById("catalogo");
-                catalogo.innerHTML = "";
-                productos.forEach(p => {
-                    let cantidad = cantidades[p.ID] || "";
-                    let div = document.createElement("div");
-                    div.className = "item";
-                    div.innerHTML=`
-                        <div><b>Marca:</b> ${p.MARCA}</div>
-                        <div><b>Modelo:</b> ${p.MODELO}</div>
-                        <img src="${p.ENLACE}" alt="Imagen de ${p.MODELO}" onclick="mostrarImagen('${p.ENLACE}')">
-                        <div><b>Cantidad seleccionada:</b> ${cantidad}</div>
-                    `;
-                    catalogo.appendChild(div);
-                });
-            }
-        });
+<h1>Productos Seleccionados - ATITUDE</h1>
+<div class="botonera">
+    <button id="descargarPDF">Descargar selección en PDF (sin imágenes)</button>
+    <button id="enviarWhatsapp">Enviar selección por WhatsApp</button>
+</div>
+<div class="catalogo" id="catalogo"></div>
+<div id="viewImgPopup" onclick="this.style.display='none'">
+    <img id="imgZoom" src="">
+</div>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+<script>
+    let seleccionados = JSON.parse(localStorage.getItem('productosSeleccionados') || '{}');
+    let cantidades = JSON.parse(localStorage.getItem('cantidadesSeleccionadas') || '{}');
+    let productos = [];
+    Papa.parse("atitude01.csv", {
+        download: true,
+        header: true,
+        complete: function(res) {
+            productos = res.data.filter(p => seleccionados[p.ID]);
+            let catalogo = document.getElementById("catalogo");
+            catalogo.innerHTML = "";
+            productos.forEach(p => {
+                let cantidad = cantidades[p.ID] || "";
+                let div = document.createElement("div");
+                div.className = "item";
+                div.innerHTML=`
+                    <div><b>Marca:</b> ${p.MARCA}</div>
+                    <div><b>Modelo:</b> ${p.MODELO}</div>
+                    <img src="${p.ENLACE}" alt="Imagen de ${p.MODELO}" onclick="mostrarImagen('${p.ENLACE}')">
+                    <div><b>Cantidad seleccionada:</b> ${cantidad}</div>
+                `;
+                catalogo.appendChild(div);
+            });
+        }
+    });
 
-        window.mostrarImagen = function(src){
-            document.getElementById('imgZoom').src = src;
-            document.getElementById('viewImgPopup').style.display = "flex";
-        };
+    window.mostrarImagen = function(src){
+        document.getElementById('imgZoom').src = src;
+        document.getElementById('viewImgPopup').style.display = "flex";
+    };
 
-        document.getElementById('descargarPDF').onclick = function(){
-            let productosSeleccionados = productos.map(p => 
-                `Marca: ${p.MARCA}\nModelo: ${p.MODELO}\nCantidad: ${cantidades[p.ID]||''}\n`
-            ).join('\n-----------------\n');
-            let blob = new Blob([productosSeleccionados], {type:'application/pdf'});
-            let link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'seleccionados.pdf';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        };
+    document.getElementById('descargarPDF').onclick = function(){
+        let productosSeleccionados = productos.map(p => 
+            `Marca: ${p.MARCA}\nModelo: ${p.MODELO}\nCantidad: ${cantidades[p.ID]||''}\n`
+        ).join('\n-----------------\n');
+        let blob = new Blob([productosSeleccionados], {type:'application/pdf'});
+        let link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'seleccionados.pdf';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
-        document.getElementById('enviarWhatsapp').onclick = function(){
-            let msg = productos.map(p => 
-                `Marca: ${p.MARCA}\nModelo: ${p.MODELO}\nCantidad: ${cantidades[p.ID]||''}`
-            ).join('\n-----------------\n');
-            let url = encodeURIComponent(msg);
-            window.open(`https://wa.me/595987334125?text=${url}`, '_blank');
-        };
-    </script>
+    document.getElementById('enviarWhatsapp').onclick = function(){
+        let msg = productos.map(p => 
+            `Marca: ${p.MARCA}\nModelo: ${p.MODELO}\nCantidad: ${cantidades[p.ID]||''}`
+        ).join('\n-----------------\n');
+        let url = encodeURIComponent(msg);
+        window.open(`https://wa.me/595987334125?text=${url}`, '_blank');
+    };
+</script>
 </body>
 </html>
+
