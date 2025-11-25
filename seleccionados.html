@@ -8,12 +8,23 @@
         h1 { text-align: center; }
         .catalogo { display: flex; flex-wrap: wrap; gap: 22px; justify-content: center; }
         .item { border: 1px solid #ccc; padding: 18px; width: 240px; text-align: center; background: #f5f5fd; border-radius: 8px; }
-        .item img { max-width: 95%; max-height: 120px; }
+        .item img { max-width: 95%; max-height: 120px; cursor:pointer; }
+        #viewImgPopup { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.7); justify-content:center; align-items:center; z-index:9999; }
+        #imgZoom { max-width:70vw; max-height:70vh; border:8px solid #fff; border-radius:8px;}
+        .botonera {text-align:center; margin-bottom:18px;}
+        .botonera button {margin:0 8px; padding:9px 18px; border:none; border-radius:4px; background:#186fb7; color:#fff; font-weight:bold; cursor:pointer;}
     </style>
 </head>
 <body>
     <h1>Productos Seleccionados - ATITUDE</h1>
+    <div class="botonera">
+        <button id="descargarPDF">Descargar selección en PDF (sin imágenes)</button>
+        <button id="enviarWhatsapp">Enviar selección por WhatsApp</button>
+    </div>
     <div class="catalogo" id="catalogo"></div>
+    <div id="viewImgPopup" onclick="this.style.display='none'">
+        <img id="imgZoom" src="">
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
     <script>
         let seleccionados = JSON.parse(localStorage.getItem('productosSeleccionados') || '{}');
@@ -33,13 +44,39 @@
                     div.innerHTML=`
                         <div><b>Marca:</b> ${p.MARCA}</div>
                         <div><b>Modelo:</b> ${p.MODELO}</div>
-                        <img src="${p.ENLACE}" alt="Imagen de ${p.MODELO}">
+                        <img src="${p.ENLACE}" alt="Imagen de ${p.MODELO}" onclick="mostrarImagen('${p.ENLACE}')">
                         <div><b>Cantidad seleccionada:</b> ${cantidad}</div>
                     `;
                     catalogo.appendChild(div);
                 });
             }
         });
+
+        window.mostrarImagen = function(src){
+            document.getElementById('imgZoom').src = src;
+            document.getElementById('viewImgPopup').style.display = "flex";
+        };
+
+        document.getElementById('descargarPDF').onclick = function(){
+            let productosSeleccionados = productos.map(p => 
+                `Marca: ${p.MARCA}\nModelo: ${p.MODELO}\nCantidad: ${cantidades[p.ID]||''}\n`
+            ).join('\n-----------------\n');
+            let blob = new Blob([productosSeleccionados], {type:'application/pdf'});
+            let link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'seleccionados.pdf';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        document.getElementById('enviarWhatsapp').onclick = function(){
+            let msg = productos.map(p => 
+                `Marca: ${p.MARCA}\nModelo: ${p.MODELO}\nCantidad: ${cantidades[p.ID]||''}`
+            ).join('\n-----------------\n');
+            let url = encodeURIComponent(msg);
+            window.open(`https://wa.me/595987334125?text=${url}`, '_blank');
+        };
     </script>
 </body>
 </html>
