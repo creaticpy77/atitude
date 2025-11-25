@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Productos Seleccionados - ATITUDE</title>
+    <style>
+        body { font-family: Arial; }
+        h1 { text-align: center; }
+        .catalogo { display: flex; flex-wrap: wrap; gap: 22px; justify-content: center; }
+        .item { border: 1px solid #ccc; padding: 18px; width: 240px; text-align: center; background: #f5f5fd; border-radius: 8px; }
+        .item img { max-width: 95%; max-height: 120px; }
+    </style>
+</head>
+<body>
+    <h1>Productos Seleccionados - ATITUDE</h1>
+    <div class="catalogo" id="catalogo"></div>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+    <script>
+        let seleccionados = JSON.parse(localStorage.getItem('productosSeleccionados') || '{}');
+        let cantidades = JSON.parse(localStorage.getItem('cantidadesSeleccionadas') || '{}');
+        let productos = [];
+        Papa.parse("atitude01.csv", {
+            download: true,
+            header: true,
+            complete: function(res) {
+                productos = res.data.filter(p => seleccionados[p.ID]);
+                let catalogo = document.getElementById("catalogo");
+                catalogo.innerHTML = "";
+                productos.forEach(p => {
+                    let cantidad = cantidades[p.ID] || "";
+                    let div = document.createElement("div");
+                    div.className = "item";
+                    div.innerHTML=`
+                        <div><b>Marca:</b> ${p.MARCA}</div>
+                        <div><b>Modelo:</b> ${p.MODELO}</div>
+                        <img src="${p.ENLACE}" alt="Imagen de ${p.MODELO}">
+                        <div><b>Cantidad seleccionada:</b> ${cantidad}</div>
+                    `;
+                    catalogo.appendChild(div);
+                });
+            }
+        });
+    </script>
+</body>
+</html>
