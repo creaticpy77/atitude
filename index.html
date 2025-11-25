@@ -7,21 +7,25 @@
         body { font-family: Arial, sans-serif; }
         h1 { text-align: center; margin-top: 1rem; }
         #busqueda { width: 280px; padding: 8px; border: 1px solid #aaa; margin-bottom: 10px; }
-        #abrirSeleccionados { margin: 10px 0 18px 0; padding: 9px 18px; border: none; background: #186fb7; color: #fff; font-weight: bold; cursor: pointer; border-radius: 4px; }
+        #buscarBtn { padding: 8px 14px; cursor: pointer; font-size: 16px; border:1px solid #aaa; border-radius: 3px; }
+        #abrirSeleccionados { margin: 0 0 14px 0; padding: 9px 18px; border: none; background: #186fb7; color: #fff; font-weight: bold; cursor: pointer; border-radius: 4px; }
         .catalogo { display: flex; flex-wrap: wrap; gap: 18px; justify-content: center; }
         .item { border: 1px solid #ccc; width: 220px; padding: 12px; margin: 5px 0; text-align: center; background: #f9f9ff; border-radius: 8px; }
-        .item img { max-width: 98%; max-height: 120px; margin: 5px 0 10px 0; }
+        .item img { max-width: 98%; max-height: 120px; margin: 5px 0 10px 0; cursor:pointer; }
         .cantidad { width: 55px; margin-bottom: 8px; }
         .paginado { text-align: center; margin: 16px 0 12px 0; }
         .paginado button { margin: 2px; padding: 6px 10px; border-radius: 3px; border: 1px solid #186fb7; background: #fff; color: #186fb7; font-weight: bold; cursor: pointer; }
         .paginado .active { background: #186fb7; color: #fff; }
         #productosPorPagina { width: 52px; margin-left: 10px; }
+        #viewImgPopup { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.7); justify-content: center; align-items: center; z-index:9999; }
+        #imgZoom { max-width:70vw; max-height:70vh; border:8px solid #fff; border-radius:8px; }
     </style>
 </head>
 <body>
     <h1>ID IMPORT - PRODUCTOS ATITUDE</h1>
     <div style="text-align:center;">
         <input type="text" id="busqueda" placeholder="Buscar por modelo...">
+        <button id="buscarBtn" title="Buscar por modelo">🔍</button>
         <button id="abrirSeleccionados">Abrir Página con productos seleccionados</button>
     </div>
     <div style="text-align:center; margin-bottom:10px;">
@@ -37,14 +41,18 @@
     <div id="catalogo" class="catalogo"></div>
     <div class="paginado" id="paginado"></div>
 
+    <div id="viewImgPopup" onclick="this.style.display='none'">
+        <img id="imgZoom" src="">
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
     <script>
         let productos = [];
         let paginaActual = 1;
         let productosPorPagina = 30;
         let busquedaActual = "";
-        let seleccionados = {};
-        let cantidades = {};
+        let seleccionados = JSON.parse(localStorage.getItem('productosSeleccionados') || '{}');
+        let cantidades = JSON.parse(localStorage.getItem('cantidadesSeleccionadas') || '{}');
 
         function filtrarProductos() {
             if(!busquedaActual) return productos;
@@ -69,15 +77,15 @@
                 el.innerHTML = `
                     <div><b>Marca:</b> ${p.MARCA}</div>
                     <div><b>Modelo:</b> ${p.MODELO}</div>
-                    <img src="${p.ENLACE}" alt="Imagen">
+                    <img src="${p.ENLACE}" alt="Imagen" onclick="mostrarImagen('${p.ENLACE}')">
                     <div>
                         <label>Cantidad: 
                             <input class="cantidad" min="1" type="number" value="${cantidad}" 
-                            onchange="this.value>=1?window.cantidades['${p.ID}']=this.value:'';">
+                            onchange="guardarCantidad('${p.ID}', this.value)">
                         </label>
                     </div>
                     <label>
-                        <input type="checkbox" ${checked} onchange="window.seleccionados['${p.ID}']=this.checked;">
+                        <input type="checkbox" ${checked} onchange="guardarSeleccion('${p.ID}', this.checked)">
                         Seleccionar producto
                     </label>
                 `;
@@ -90,49 +98,60 @@
             let totalPag = Math.ceil(total / productosPorPagina);
             let paginado = document.getElementById("paginado");
             paginado.innerHTML = '';
-            if (totalPag < 2) return;
-            // Botones paginado
+            if(totalPag < 2) return;
             paginado.innerHTML += `<button onclick="paginar(1)">INICIO</button>`;
-            paginado.innerHTML += `<button onclick="paginar(Math.max(1, window.paginaActual-1))">ANTERIOR</button>`;
+            paginado.innerHTML += `<button onclick="paginar(Math.max(1, paginaActual-1))">ANTERIOR</button>`;
             for(let i=1;i<=totalPag;i++) {
                 paginado.innerHTML += 
                     `<button onclick="paginar(${i})" class="${i===paginaActual?'active':''}">${i}</button>`;
             }
-            paginado.innerHTML += `<button onclick="paginar(Math.min(${totalPag}, window.paginaActual+1))">SIGUIENTE</button>`;
+            paginado.innerHTML += `<button onclick="paginar(Math.min(${totalPag}, paginaActual+1))">SIGUIENTE</button>`;
             paginado.innerHTML += `<button onclick="paginar(${totalPag})">FINAL</button>`;
         }
 
         function paginar(num) {
-            window.paginaActual=num;
+            paginaActual = num;
             mostrarProductos();
         }
 
-        // Buscador por modelo
-        document.getElementById('busqueda').addEventListener('input', function(e){
-            window.busquedaActual = this.value;
-            window.paginaActual = 1;
+        document.getElementById('buscarBtn').addEventListener('click', function(){
+            busquedaActual = document.getElementById("busqueda").value;
+            paginaActual = 1;
             mostrarProductos();
+        });
+
+        document.getElementById('busqueda').addEventListener('keydown', function(e){
+            if(e.key === "Enter") document.getElementById('buscarBtn').click();
         });
 
         document.getElementById('productosPorPagina').addEventListener('change', function(){
             productosPorPagina = +this.value;
-            window.paginaActual = 1;
+            paginaActual = 1;
             mostrarProductos();
         });
 
         document.getElementById('abrirSeleccionados').addEventListener('click', function(){
-            // Guarda estado y redirige
             localStorage.setItem('productosSeleccionados', JSON.stringify(seleccionados));
             localStorage.setItem('cantidadesSeleccionadas', JSON.stringify(cantidades));
             location.href = "seleccionados.html";
         });
 
-        // Exponer seleccionados/cantidades global
-        window.seleccionados = seleccionados;
-        window.cantidades = cantidades;
-        window.paginaActual = paginaActual;
+        function guardarSeleccion(id, state){
+            seleccionados[id] = state;
+            localStorage.setItem('productosSeleccionados', JSON.stringify(seleccionados));
+        }
 
-        // Cargar productos de CSV
+        function guardarCantidad(id, value){
+            if(value >= 1) cantidades[id] = value;
+            else delete cantidades[id];
+            localStorage.setItem('cantidadesSeleccionadas', JSON.stringify(cantidades));
+        }
+
+        window.mostrarImagen = function(src){
+            document.getElementById('imgZoom').src = src;
+            document.getElementById('viewImgPopup').style.display = "flex";
+        };
+
         Papa.parse("atitude01.csv", {
             download: true,
             header: true,
@@ -144,4 +163,5 @@
     </script>
 </body>
 </html>
+
 
