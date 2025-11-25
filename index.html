@@ -24,6 +24,7 @@
             flex-wrap: wrap;
             gap: 18px;
             justify-content: center;
+            transition: all 0.3s;
         }
         .item {
             border: 1px solid #ccc;
@@ -33,6 +34,7 @@
             border-radius: 8px;
             text-align: center;
             box-sizing: border-box;
+            transition: all 0.3s;
         }
         .item img {
             max-width: 98%;
@@ -41,70 +43,59 @@
             cursor: pointer;
             border-radius: 6px;
         }
-        .cantidad {
-            width: 55px;
-            margin-bottom: 8px;
-        }
-        .paginado {
-            text-align: center;
-            margin: 16px 0 12px 0;
-        }
+        .cantidad { width: 55px; margin-bottom: 8px; }
+        .paginado { text-align: center; margin: 16px 0 12px 0; }
         .paginado button {
-            margin: 2px;
-            padding: 6px 10px;
-            border-radius: 3px;
-            border: 1px solid #186fb7;
-            background: #fff;
-            color: #186fb7;
-            font-weight: bold;
-            cursor: pointer;
+            margin: 2px; padding: 6px 10px;
+            border-radius: 3px; border: 1px solid #186fb7;
+            background: #fff; color: #186fb7;
+            font-weight: bold; cursor: pointer;
         }
-        .paginado .active {
-            background: #186fb7;
-            color: #fff;
-        }
-        #productosPorPagina {
-            width: 52px;
-            margin-left: 10px;
-        }
+        .paginado .active { background: #186fb7; color: #fff; }
+        #productosPorPagina { width: 52px; margin-left: 10px; }
         #viewImgPopup {
-            display:none;
-            position:fixed;
-            top:0; left:0; right:0; bottom:0;
+            display:none; position:fixed; top:0; left:0; right:0; bottom:0;
             background:rgba(0,0,0,.7);
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
+            justify-content: center; align-items: center; z-index: 9999;
         }
         #imgZoom {
-            max-width: 90vw;
-            max-height: 90vh;
-            border: 8px solid #fff;
-            border-radius: 8px;
+            max-width: 90vw; max-height: 90vh;
+            border: 8px solid #fff; border-radius: 8px;
+        }
+        #cerrarPopup {
+            color:white;position:absolute;top:22px;right:32px;
+            font-size:2rem;cursor:pointer;z-index:10001;font-weight:bold;
+            background:none;outline:none;border:none;
         }
         @media screen and (max-width: 600px) {
             .item {
                 width: 90vw;
                 padding: 10px;
             }
-            #busqueda {
-                width: 90vw;
-                margin-bottom: 10px;
-            }
-            #abrirSeleccionados, #buscarBtn {
+            #busqueda, #abrirSeleccionados, #buscarBtn {
                 width: 90vw;
                 margin-bottom: 10px;
                 font-size: 1.1rem;
             }
-            .paginado button {
-                padding: 8px 10px;
-                font-size: 0.9rem;
-            }
+            .paginado button { padding: 8px 10px; font-size: 0.9rem; }
         }
+        /* Vista lista (filas) */
+        .catalogo.lista { flex-direction: column; align-items:center; }
+        .item.lista {
+            width: 98vw !important;
+            max-width:600px; display: flex;
+            align-items: center; text-align:left; gap:16px;
+        }
+        .item.lista img { max-width: 100px; max-height:100px; margin: 0; }
     </style>
 </head>
 <body>
 <h1>ID IMPORT - PRODUCTOS ATITUDE</h1>
+<div style="text-align:center; margin-bottom: 8px;">
+    <label>
+        <input type="checkbox" id="vistaLista"> Visualizar como lista (filas)
+    </label>
+</div>
 <div style="text-align:center;">
     <input type="text" id="busqueda" placeholder="Buscar por modelo...">
     <button id="buscarBtn" title="Buscar por modelo">🔍</button>
@@ -124,11 +115,18 @@
 <div class="paginado" id="paginado"></div>
 
 <div id="viewImgPopup" onclick="this.style.display='none'">
+    <span id="cerrarPopup">&times;</span>
     <img id="imgZoom" src="">
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
 <script>
+    // --- CONFIGURACIÓN ---
+    // Por defecto, lee CSV local. Para Google Sheets: usa la URL de exportación CSV PÚBLICA
+    const CSV_PATH = "atitude01.csv";
+    // Ejemplo de cómo hacerlo desde Sheets (debe ser público): 
+    // const CSV_PATH = "https://docs.google.com/spreadsheets/d/1Ab_ZH3FGPyEw-_aAKuCXgGw_2bDYJXQKQicqKryNVzg/export?format=csv";
+
     let productos = [];
     let paginaActual = 1;
     let productosPorPagina = 30;
@@ -155,21 +153,23 @@
             let checked = seleccionados[p.ID] ? "checked" : "";
             let cantidad = cantidades[p.ID] || "";
             let el = document.createElement("div");
-            el.className = "item";
+            el.className = "item" + (document.getElementById("vistaLista").checked ? " lista" : "");
             el.innerHTML = `
-                <div><b>Marca:</b> ${p.MARCA}</div>
-                <div><b>Modelo:</b> ${p.MODELO}</div>
                 <img src="${p.ENLACE}" alt="Imagen" onclick="mostrarImagen('${p.ENLACE}')">
                 <div>
-                    <label>Cantidad: 
-                        <input class="cantidad" min="1" type="number" value="${cantidad}" 
-                        onchange="guardarCantidad('${p.ID}', this.value)">
-                    </label>
+                  <div><b>Marca:</b> ${p.MARCA}</div>
+                  <div><b>Modelo:</b> ${p.MODELO}</div>
+                  <div>
+                      <label>Cantidad: 
+                          <input class="cantidad" min="1" type="number" value="${cantidad}" 
+                          onchange="guardarCantidad('${p.ID}', this.value)">
+                      </label>
+                  </div>
+                  <label>
+                      <input type="checkbox" ${checked} onchange="guardarSeleccion('${p.ID}', this.checked)">
+                      Seleccionar producto
+                  </label>
                 </div>
-                <label>
-                    <input type="checkbox" ${checked} onchange="guardarSeleccion('${p.ID}', this.checked)">
-                    Seleccionar producto
-                </label>
             `;
             catalogo.appendChild(el);
         });
@@ -201,7 +201,6 @@
         paginaActual = 1;
         mostrarProductos();
     });
-
     document.getElementById('busqueda').addEventListener('keydown', function(e){
         if(e.key === "Enter") document.getElementById('buscarBtn').click();
     });
@@ -218,11 +217,20 @@
         location.href = "seleccionados.html";
     });
 
+    document.getElementById('vistaLista').addEventListener('change', function() {
+        let catalogo = document.getElementById("catalogo");
+        if(this.checked){
+            catalogo.classList.add("lista");
+        } else {
+            catalogo.classList.remove("lista");
+        }
+        mostrarProductos();
+    });
+
     function guardarSeleccion(id, state){
         seleccionados[id] = state;
         localStorage.setItem('productosSeleccionados', JSON.stringify(seleccionados));
     }
-
     function guardarCantidad(id, value){
         if(value >= 1) cantidades[id] = value;
         else delete cantidades[id];
@@ -233,8 +241,17 @@
         document.getElementById('imgZoom').src = src;
         document.getElementById('viewImgPopup').style.display = "flex";
     };
+    document.getElementById('cerrarPopup').onclick = function(e){
+        e.stopPropagation();
+        document.getElementById('viewImgPopup').style.display = "none";
+    };
+    window.addEventListener('keydown', function(e){
+        if(e.key === "Escape"){
+            document.getElementById('viewImgPopup').style.display='none';
+        }
+    });
 
-    Papa.parse("atitude01.csv", {
+    Papa.parse(CSV_PATH, {
         download: true,
         header: true,
         complete: function(res) {
@@ -245,6 +262,7 @@
 </script>
 </body>
 </html>
+
 
 
 
