@@ -122,9 +122,7 @@
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
 <script>
     // --- CONFIGURACIÓN ---
-    // Por defecto, lee CSV local. Para Google Sheets: usa la URL de exportación CSV PÚBLICA
     const CSV_PATH = "atitude01.csv";
-    // Ejemplo de cómo hacerlo desde Sheets (debe ser público): 
     // const CSV_PATH = "https://docs.google.com/spreadsheets/d/1Ab_ZH3FGPyEw-_aAKuCXgGw_2bDYJXQKQicqKryNVzg/export?format=csv";
 
     let productos = [];
@@ -150,8 +148,9 @@
         let catalogo = document.getElementById("catalogo");
         catalogo.innerHTML = "";
         paginados.forEach((p) => {
-            let checked = seleccionados[p.ID] ? "checked" : "";
-            let cantidad = cantidades[p.ID] || "";
+            let idProducto = p.ID || p.MODELO; // Fallback por si no hay ID
+            let checked = seleccionados[idProducto] ? "checked" : "";
+            let cantidad = cantidades[idProducto] || "";
             let el = document.createElement("div");
             el.className = "item" + (document.getElementById("vistaLista").checked ? " lista" : "");
             el.innerHTML = `
@@ -162,11 +161,11 @@
                   <div>
                       <label>Cantidad: 
                           <input class="cantidad" min="1" type="number" value="${cantidad}" 
-                          onchange="guardarCantidad('${p.ID}', this.value)">
+                          onchange="guardarCantidad('${idProducto}', this.value)">
                       </label>
                   </div>
                   <label>
-                      <input type="checkbox" ${checked} onchange="guardarSeleccion('${p.ID}', this.checked)">
+                      <input type="checkbox" ${checked} onchange="guardarSeleccion('${idProducto}', this.checked)">
                       Seleccionar producto
                   </label>
                 </div>
@@ -212,6 +211,11 @@
     });
 
     document.getElementById('abrirSeleccionados').addEventListener('click', function(){
+        let tieneSeleccionados = Object.keys(seleccionados).some(key => seleccionados[key] === true);
+        if(!tieneSeleccionados) {
+            alert('Por favor, selecciona al menos un producto antes de continuar.');
+            return;
+        }
         localStorage.setItem('productosSeleccionados', JSON.stringify(seleccionados));
         localStorage.setItem('cantidadesSeleccionadas', JSON.stringify(cantidades));
         location.href = "seleccionados.html";
@@ -230,7 +234,9 @@
     function guardarSeleccion(id, state){
         seleccionados[id] = state;
         localStorage.setItem('productosSeleccionados', JSON.stringify(seleccionados));
+        console.log('Seleccionados:', seleccionados); // Debug
     }
+    
     function guardarCantidad(id, value){
         if(value >= 1) cantidades[id] = value;
         else delete cantidades[id];
@@ -255,13 +261,14 @@
         download: true,
         header: true,
         complete: function(res) {
-            productos = res.data;
+            productos = res.data.filter(p => p.ID || p.MODELO); // Filtra productos vacíos
             mostrarProductos();
         }
     });
 </script>
 </body>
 </html>
+
 
 
 
